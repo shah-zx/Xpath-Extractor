@@ -3,7 +3,7 @@ from lxml import etree
 import pandas as pd
 import io
 
-# --- Core Logic Functions (Modified for Web) ---
+# --- Core Logic Functions ---
 
 def build_logical_xpath(element):
     """Constructs the logical XPath from the XML structure."""
@@ -41,7 +41,6 @@ def extract_group_xpaths(tree, group_name):
     """Extracts XPaths for all public fields in a group."""
     results = []
     target_ids = [f"{group_name}Input", f"{group_name}Output"]
-    # Handle 'And' naming convention from your original code
     base_name = group_name.replace("And", "")
     if base_name + "Input" not in target_ids:
         target_ids.extend([f"{base_name}Input", f"{base_name}Output"])
@@ -62,12 +61,10 @@ def extract_group_xpaths(tree, group_name):
 st.set_page_config(page_title="XPath Extractor", layout="wide")
 st.title("📂 XML XPath Extraction Portal")
 
-# 1. Upload Section
 uploaded_file = st.file_uploader("Upload your Manuscript (XML)", type=["xml"])
 
 if uploaded_file:
     try:
-        # Parse the uploaded XML
         tree = etree.parse(uploaded_file)
         st.success("File uploaded successfully!")
 
@@ -79,9 +76,7 @@ if uploaded_file:
             if st.button("Extract Group"):
                 data = extract_group_xpaths(tree, group_input)
                 if data:
-                    df = pd.DataFrame(data)
-                    st.session_state['results_df'] = df
-                    st.dataframe(df)
+                    st.session_state['results_df'] = pd.DataFrame(data)
                 else:
                     st.warning("No data found for this group.")
 
@@ -92,17 +87,30 @@ if uploaded_file:
                 fields = [f.strip() for f in field_input.split('\n') if f.strip()]
                 data = [find_xpath_for_field(tree, f) for f in fields]
                 if data:
-                    df = pd.DataFrame(data)
-                    st.session_state['results_df'] = df
-                    st.dataframe(df)
+                    st.session_state['results_df'] = pd.DataFrame(data)
 
-        # 2. Export Section
+        # --- Enhanced Results Display ---
         if 'results_df' in st.session_state:
+            df = st.session_state['results_df']
             st.divider()
-            # Convert DF to Excel in memory
+            
+            # Create Tabs for different viewing modes
+            tab1, tab2 = st.tabs(["📊 Interactive View", "📋 Copy-Paste View"])
+            
+            with tab1:
+                st.dataframe(df, use_container_width=True)
+            
+            with tab2:
+                st.info("Click the icon in the top right of the box below to copy all data at once.")
+                # Convert DF to a TSV (Tab Separated) string for easy pasting into Excel
+                tsv_data = df.to_csv(index=False, sep='\t')
+                st.code(tsv_data, language='text')
+
+            # --- Export Section ---
             output = io.BytesIO()
+            # We use xlsxwriter for Excel export
             with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                st.session_state['results_df'].to_excel(writer, index=False)
+                df.to_excel(writer, index=False)
             
             st.download_button(
                 label="📥 Download Results as Excel",
