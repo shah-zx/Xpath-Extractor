@@ -8,7 +8,7 @@ import io
 def extract_forms_by_coverage_code_value(tree, target_code):
     """
     Search for forms where a CoverageCode field's rule value matches target_code.
-    Example: Finds <public id="MLTC0107Output.CoverageCode"> with <value value="ML" />
+    Extracts the ID prefix (before the dot) for cleaner output.
     """
     found_forms = set()
     
@@ -22,18 +22,15 @@ def extract_forms_by_coverage_code_value(tree, target_code):
     matching_values = tree.xpath(xpath_query)
     
     for val_elem in matching_values:
-        # Move up to the parent 'object' (e.g., MLTC0107Output or MLTC0107)
-        # We want to find the ID of the main form object.
-        current = val_elem.getparent().getparent() # This is the <public> element
+        # The grandparent of the <value> tag is the <public> tag
+        public_tag = val_elem.getparent().getparent()
+        full_id = public_tag.get('id', '')
         
-        # Traverse up to find the main form object ID (e.g., MLTC0107)
-        while current is not None:
-            obj_id = current.get('id', '')
-            # Form IDs in your XML usually look like MLTC0107, PSXS0146, etc.
-            if obj_id and not (obj_id.endswith('Output') or obj_id.endswith('Input') or obj_id.endswith('Private')):
-                found_forms.add(obj_id)
-                break
-            current = current.getparent()
+        if full_id:
+            # Logic: Only provide the name before the "."
+            # If no "." exists, it provides the string as is.
+            clean_name = full_id.split('.')[0]
+            found_forms.add(clean_name)
             
     return sorted(list(found_forms))
 
@@ -59,11 +56,11 @@ if uploaded_file:
             if results:
                 st.write(f"### Found {len(results)} forms for Coverage Code: **{cov_input}**")
                 
-                # Display results as a clean list/table
-                df = pd.DataFrame(results, columns=["Form Name / Type"])
+                # Display results in a table for clarity
+                df = pd.DataFrame(results, columns=["Extracted Form Name"])
                 st.table(df)
                 
-                # Copy-paste section
+                # Copy-paste section as requested
                 st.divider()
                 st.subheader("Copy-Paste List")
                 form_string = ", ".join(results)
