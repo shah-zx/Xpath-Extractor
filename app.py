@@ -160,4 +160,30 @@ if uploaded_file:
                 # Export Section
                 output = io.BytesIO()
                 with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                    df.to_excel(writer, index=False
+                    df.to_excel(writer, index=False)
+                st.download_button(
+                    label="📥 Download Excel",
+                    data=output.getvalue(),
+                    file_name="manuscript_extract.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+
+            tab1, tab2 = st.tabs(["📋 Interactive Table", "✂️ Copy-Paste Mode"])
+            
+            with tab1:
+                st.dataframe(df, use_container_width=True, hide_index=True)
+            
+            with tab2:
+                st.info("Copy the block below for quick entry into documentation.")
+                if "Matching Forms" in df.columns:
+                    # Specific format for Coverage Code list
+                    form_list = ", ".join(df["Matching Forms"].tolist())
+                    st.code(f"Forms - {form_list}", language='text')
+                else:
+                    tsv_data = df.to_csv(index=False, sep='\t')
+                    st.code(tsv_data, language='text')
+
+    except Exception as e:
+        st.error(f"Critical Error: {e}")
+else:
+    st.info("Please upload a Manuscript XML file from the sidebar to begin.")
