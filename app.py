@@ -8,7 +8,7 @@ import io
 def extract_forms_by_coverage_code_value(tree, target_code):
     """
     Search for forms where a CoverageCode field's rule value matches target_code.
-    Extracts the ID prefix (before the dot) for cleaner output.
+    Refines 'MLDO0106Output.CoverageCode' down to 'MLDO0106'.
     """
     found_forms = set()
     
@@ -27,10 +27,16 @@ def extract_forms_by_coverage_code_value(tree, target_code):
         full_id = public_tag.get('id', '')
         
         if full_id:
-            # Logic: Only provide the name before the "."
-            # If no "." exists, it provides the string as is.
-            clean_name = full_id.split('.')[0]
-            found_forms.add(clean_name)
+            # 1. Split by "." to remove ".CoverageCode" -> "MLDO0106Output"
+            base_name = full_id.split('.')[0]
+            
+            # 2. Remove "Output", "Input", or "Private" suffixes to get just the Form Name
+            for suffix in ["Output", "Input", "Private"]:
+                if base_name.endswith(suffix):
+                    base_name = base_name[: -len(suffix)]
+                    break
+            
+            found_forms.add(base_name)
             
     return sorted(list(found_forms))
 
@@ -56,11 +62,11 @@ if uploaded_file:
             if results:
                 st.write(f"### Found {len(results)} forms for Coverage Code: **{cov_input}**")
                 
-                # Display results in a table for clarity
-                df = pd.DataFrame(results, columns=["Extracted Form Name"])
+                # Display results in a table
+                df = pd.DataFrame(results, columns=["Form Name"])
                 st.table(df)
                 
-                # Copy-paste section as requested
+                # Copy-paste section
                 st.divider()
                 st.subheader("Copy-Paste List")
                 form_string = ", ".join(results)
